@@ -10962,7 +10962,7 @@ var $author$project$Main$init = function (_v0) {
 		$elm$http$Http$get(
 			{
 				expect: $elm$http$Http$expectString($author$project$Main$GotText),
-				url: '/assets/bread.txt'
+				url: 'https://github.com/GooseLong/type_theory_liberal/assets/bread.txt'
 			}));
 };
 var $author$project$Main$Keyboard = function (a) {

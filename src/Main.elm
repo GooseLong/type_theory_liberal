@@ -59,7 +59,7 @@ init : () -> ( Model, Cmd Msg )
 init _ =
     ( { book = Loading }
     , Http.get
-        { url = "/assets/bread.txt"
+        { url = "https://github.com/GooseLong/type_theory_liberal/assets/bread.txt"
         , expect = Http.expectString GotText
         }
     )
