@@ -69,7 +69,7 @@ curr (Bookmark bm) txt =
         |> Array.get bm.letter
 
 
-checkChar : Char -> Book -> Book
+checkChar : Char -> Book -> ( Book, Bool )
 checkChar char ((Book bm txt) as book) =
     let
         current =
@@ -78,10 +78,10 @@ checkChar char ((Book bm txt) as book) =
     case current of
         Just cr ->
             if (cr == char) || (char == ' ' && cr == '␣') then
-                move book
+                ( move book, False )
 
             else
-                book
+                ( book, True )
 
         Nothing ->
-            book
+            ( book, False )

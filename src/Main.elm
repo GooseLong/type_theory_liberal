@@ -23,6 +23,7 @@ import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Http
 import Json.Decode as D
+import Process
 import String
 import Task exposing (succeed)
 
@@ -52,12 +53,13 @@ loadMap f ls =
 
 type alias Model =
     { book : LoadState Book
+    , mistyped : Bool
     }
 
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { book = Loading }
+    ( { book = Loading, mistyped = False }
     , Http.get
         { url = "assets/bread.txt"
         , expect = Http.expectString GotText
@@ -71,8 +73,8 @@ init _ =
 
 type Msg
     = GotText (Result Http.Error String)
-    | TestNext
     | Keyboard Key
+    | MistypeTimeout
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -86,25 +88,35 @@ update msg model =
                 Err err ->
                     ( { model | book = Failure err }, Cmd.none )
 
-        TestNext ->
-            case model.book of
-                Success book ->
-                    ( { model | book = Success <| move book }, Cmd.none )
-
-                _ ->
-                    let
-                        _ =
-                            Debug.log "wtf"
-                    in
-                    ( model, Cmd.none )
-
         Keyboard key ->
             case key of
                 Character char ->
-                    ( { model | book = loadMap (checkChar char) model.book }, Cmd.none )
+                    case model.book of
+                        Success oldBook ->
+                            let
+                                ( newBook, error ) =
+                                    checkChar char oldBook
+                            in
+                            if error then
+                                ( { model | mistyped = True }, delay 15 MistypeTimeout )
+
+                            else
+                                ( { model | book = loadMap (\_ -> newBook) model.book }, Cmd.none )
+
+                        _ ->
+                            ( model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
+
+        MistypeTimeout ->
+            ( { model | mistyped = False }, Cmd.none )
+
+
+delay : Float -> Msg -> Cmd Msg
+delay time msg =
+    Process.sleep time
+        |> Task.perform (\_ -> msg)
 
 
 
@@ -161,19 +173,27 @@ view model =
                         get book
                 in
                 column
-                    [ El.width El.fill ]
-                    [ row [ El.centerX, Font.family [ Font.monospace ], El.width El.shrink ]
+                    [ El.width El.fill
+                    , El.height (El.px 360)
+                    , El.alignTop
+                    ]
+                    [ row
+                        [ El.alignBottom
+                        , El.centerX
+                        , Font.size 44
+                        , Font.family [ Font.monospace ]
+                        , El.width El.shrink
+                        ]
                         [ el pastStyle <| text past_word
                         , case maybe_current_letter of
                             Nothing ->
                                 text "[error]"
 
                             Just current_letter ->
-                                el currentStyle <|
+                                el (currentStyle model.mistyped) <|
                                     text (String.fromChar current_letter)
                         , el futureStyle <| text future_words
                         ]
-                    , el [] <| button [] { label = text "next", onPress = Just TestNext }
                     ]
 
 
@@ -182,11 +202,16 @@ pastStyle =
     [ El.alignRight ]
 
 
-currentStyle : List (El.Attribute msg)
-currentStyle =
+currentStyle : Bool -> List (El.Attribute msg)
+currentStyle mistyped =
     [ El.centerX
     , El.rgb 1 1 1 |> Font.color
-    , Element.Background.color (El.rgb 0.1 0.1 0.1)
+    , Element.Background.color <|
+        if mistyped then
+            El.rgb 1 0 0
+
+        else
+            El.rgb 0.1 0.1 0.1
     , Font.shadow
         { offset = ( 0.2, 0.2 )
         , blur = 0.1
