@@ -1,6 +1,6 @@
 module Main exposing (..)
 
-import Book exposing (Book, checkChar, get, move, newBook)
+import Book exposing (Book, bookDecoder, checkChar, get, move)
 import Browser
 import Browser.Events exposing (onKeyPress)
 import Element as El
@@ -51,18 +51,23 @@ loadMap f ls =
             Loading
 
 
-type alias Model =
-    { book : LoadState Book
+type alias Game =
+    { book : Book
+    , options : List String
     , mistyped : Bool
     }
 
 
+type alias Model =
+    LoadState Game
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( { book = Loading, mistyped = False }
+    ( Loading
     , Http.get
-        { url = "assets/bread.txt"
-        , expect = Http.expectString GotText
+        { url = "assets/texts.json"
+        , expect = Http.expectJson GotText textsDecoder
         }
     )
 
@@ -71,46 +76,59 @@ init _ =
 -- UPDATE
 
 
+textsDecoder : D.Decoder Game
+textsDecoder =
+    D.map3 Game
+        -- book
+        (D.at [ "texts", "conquest_of_bread" ] bookDecoder)
+        --options
+        (D.field "names" (D.list D.string))
+        --mistyped
+        (D.succeed False)
+
+
 type Msg
-    = GotText (Result Http.Error String)
+    = GotText (Result Http.Error Game)
     | Keyboard Key
     | MistypeTimeout
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        GotText result ->
+    case ( msg, model ) of
+        ( GotText result, Loading ) ->
             case result of
-                Ok fullText ->
-                    ( { model | book = Success <| newBook fullText }, Cmd.none )
+                Ok game ->
+                    ( Success game, Cmd.none )
 
                 Err err ->
-                    ( { model | book = Failure err }, Cmd.none )
+                    ( Failure err, Cmd.none )
 
-        Keyboard key ->
+        ( Keyboard key, Success game ) ->
             case key of
                 Character char ->
-                    case model.book of
-                        Success oldBook ->
-                            let
-                                ( newBook, error ) =
-                                    checkChar char oldBook
-                            in
-                            if error then
-                                ( { model | mistyped = True }, delay 15 MistypeTimeout )
+                    let
+                        ( newBook, error ) =
+                            checkChar char game.book
+                    in
+                    if error then
+                        ( Success { game | mistyped = True }, delay 15 MistypeTimeout )
 
-                            else
-                                ( { model | book = loadMap (\_ -> newBook) model.book }, Cmd.none )
-
-                        _ ->
-                            ( model, Cmd.none )
+                    else
+                        ( Success { game | book = newBook }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
-        MistypeTimeout ->
-            ( { model | mistyped = False }, Cmd.none )
+        ( MistypeTimeout, Success game ) ->
+            ( Success { game | mistyped = False }, Cmd.none )
+
+        _ ->
+            let
+                _ =
+                    Debug.log "oh no"
+            in
+            ( model, Cmd.none )
 
 
 delay : Float -> Msg -> Cmd Msg
@@ -125,7 +143,7 @@ delay time msg =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model.book of
+    case model of
         Success _ ->
             onKeyPress keyDecoder
 
@@ -160,40 +178,77 @@ toKey string =
 view : Model -> Html Msg
 view model =
     layout [] <|
-        case model.book of
+        case model of
             Loading ->
                 text "Loading. . ."
 
             Failure err ->
                 text <| Debug.toString err
 
-            Success book ->
+            Success game ->
                 let
+                    book =
+                        game.book
+
                     ( past_word, maybe_current_letter, future_words ) =
                         get book
                 in
                 column
                     [ El.width El.fill
-                    , El.height (El.px 360)
-                    , El.alignTop
+                    , El.height El.fill
+                    , Font.family
+                        [ Font.typeface "Georgia"
+                        , Font.serif
+                        ]
+                    , El.spacing 8
+                    , El.padding 4
                     ]
-                    [ row
-                        [ El.alignBottom
-                        , El.centerX
-                        , Font.size 44
-                        , Font.family [ Font.monospace ]
-                        , El.width El.shrink
+                    [ column
+                        [ El.width El.fill
+                        , El.height (El.px 360)
+                        , El.alignTop
                         ]
-                        [ el pastStyle <| text past_word
-                        , case maybe_current_letter of
-                            Nothing ->
-                                text "[error]"
+                        [ row
+                            [ El.alignBottom
+                            , El.centerX
+                            , Font.size 44
+                            , Font.family [ Font.monospace ]
+                            , El.width El.shrink
+                            ]
+                            [ el pastStyle <| text past_word
+                            , case maybe_current_letter of
+                                Nothing ->
+                                    text "[error]"
 
-                            Just current_letter ->
-                                el (currentStyle model.mistyped) <|
-                                    text (String.fromChar current_letter)
-                        , el futureStyle <| text future_words
+                                Just current_letter ->
+                                    el (currentStyle game.mistyped) <|
+                                        text (String.fromChar current_letter)
+                            , el futureStyle <| text future_words
+                            ]
                         ]
+                    , el
+                        [ El.centerX
+                        , Font.size 20
+                        , Font.extraLight
+                        , El.spacing 3
+                        , Font.color (El.rgb 0.4 0.4 0.4)
+                        ]
+                      <|
+                        el [] <|
+                            text (Book.chapterName book)
+                    , el
+                        [ El.centerX
+                        , Font.size 22
+                        ]
+                      <|
+                        text (Book.name book)
+                    , el
+                        [ El.centerX
+                        , Font.size 18
+                        , Font.italic
+                        ]
+                      <|
+                        text (Book.author book)
                     ]
 
 

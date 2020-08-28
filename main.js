@@ -5360,6 +5360,7 @@ var $author$project$Main$GotText = function (a) {
 	return {$: 'GotText', a: a};
 };
 var $author$project$Main$Loading = {$: 'Loading'};
+var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -5915,17 +5916,6 @@ var $elm$http$Http$expectStringResponse = F2(
 			$elm$core$Basics$identity,
 			A2($elm$core$Basics$composeR, toResult, toMsg));
 	});
-var $elm$http$Http$BadBody = function (a) {
-	return {$: 'BadBody', a: a};
-};
-var $elm$http$Http$BadStatus = function (a) {
-	return {$: 'BadStatus', a: a};
-};
-var $elm$http$Http$BadUrl = function (a) {
-	return {$: 'BadUrl', a: a};
-};
-var $elm$http$Http$NetworkError = {$: 'NetworkError'};
-var $elm$http$Http$Timeout = {$: 'Timeout'};
 var $elm$core$Result$mapError = F2(
 	function (f, result) {
 		if (result.$ === 'Ok') {
@@ -5937,6 +5927,17 @@ var $elm$core$Result$mapError = F2(
 				f(e));
 		}
 	});
+var $elm$http$Http$BadBody = function (a) {
+	return {$: 'BadBody', a: a};
+};
+var $elm$http$Http$BadStatus = function (a) {
+	return {$: 'BadStatus', a: a};
+};
+var $elm$http$Http$BadUrl = function (a) {
+	return {$: 'BadUrl', a: a};
+};
+var $elm$http$Http$NetworkError = {$: 'NetworkError'};
+var $elm$http$Http$Timeout = {$: 'Timeout'};
 var $elm$http$Http$resolve = F2(
 	function (toResult, response) {
 		switch (response.$) {
@@ -5960,12 +5961,19 @@ var $elm$http$Http$resolve = F2(
 					toResult(body));
 		}
 	});
-var $elm$http$Http$expectString = function (toMsg) {
-	return A2(
-		$elm$http$Http$expectStringResponse,
-		toMsg,
-		$elm$http$Http$resolve($elm$core$Result$Ok));
-};
+var $elm$http$Http$expectJson = F2(
+	function (toMsg, decoder) {
+		return A2(
+			$elm$http$Http$expectStringResponse,
+			toMsg,
+			$elm$http$Http$resolve(
+				function (string) {
+					return A2(
+						$elm$core$Result$mapError,
+						$elm$json$Json$Decode$errorToString,
+						A2($elm$json$Json$Decode$decodeString, decoder, string));
+				}));
+	});
 var $elm$http$Http$emptyBody = _Http_emptyBody;
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
@@ -6139,20 +6147,121 @@ var $elm$http$Http$get = function (r) {
 	return $elm$http$Http$request(
 		{body: $elm$http$Http$emptyBody, expect: r.expect, headers: _List_Nil, method: 'GET', timeout: $elm$core$Maybe$Nothing, tracker: $elm$core$Maybe$Nothing, url: r.url});
 };
+var $author$project$Main$Game = F3(
+	function (book, options, mistyped) {
+		return {book: book, mistyped: mistyped, options: options};
+	});
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$json$Json$Decode$at = F2(
+	function (fields, decoder) {
+		return A3($elm$core$List$foldr, $elm$json$Json$Decode$field, decoder, fields);
+	});
+var $author$project$Book$Book = F4(
+	function (name, author, chapters, bookmark) {
+		return {author: author, bookmark: bookmark, chapters: chapters, name: name};
+	});
+var $author$project$Book$Bookmark = F3(
+	function (chapter, word, letter) {
+		return {chapter: chapter, letter: letter, word: word};
+	});
+var $author$project$Book$Chapter = F2(
+	function (name, content) {
+		return {content: content, name: name};
+	});
+var $elm$core$Array$fromListHelp = F3(
+	function (list, nodeList, nodeListSize) {
+		fromListHelp:
+		while (true) {
+			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
+			var jsArray = _v0.a;
+			var remainingItems = _v0.b;
+			if (_Utils_cmp(
+				$elm$core$Elm$JsArray$length(jsArray),
+				$elm$core$Array$branchFactor) < 0) {
+				return A2(
+					$elm$core$Array$builderToArray,
+					true,
+					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
+			} else {
+				var $temp$list = remainingItems,
+					$temp$nodeList = A2(
+					$elm$core$List$cons,
+					$elm$core$Array$Leaf(jsArray),
+					nodeList),
+					$temp$nodeListSize = nodeListSize + 1;
+				list = $temp$list;
+				nodeList = $temp$nodeList;
+				nodeListSize = $temp$nodeListSize;
+				continue fromListHelp;
+			}
+		}
+	});
+var $elm$core$Array$fromList = function (list) {
+	if (!list.b) {
+		return $elm$core$Array$empty;
+	} else {
+		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
+	}
+};
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $elm$core$String$words = _String_words;
+var $author$project$Book$chapterDecoder = A2(
+	$elm$json$Json$Decode$map,
+	$elm$core$Array$fromList,
+	$elm$json$Json$Decode$list(
+		A3(
+			$elm$json$Json$Decode$map2,
+			$author$project$Book$Chapter,
+			A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+			A2(
+				$elm$json$Json$Decode$map,
+				A2(
+					$elm$core$Basics$composeR,
+					$elm$core$String$words,
+					A2(
+						$elm$core$Basics$composeR,
+						$elm$core$List$map(
+							function (str) {
+								return str + '␣';
+							}),
+						$elm$core$Array$fromList)),
+				A2($elm$json$Json$Decode$field, 'content', $elm$json$Json$Decode$string)))));
+var $elm$json$Json$Decode$map4 = _Json_map4;
+var $author$project$Book$bookDecoder = A5(
+	$elm$json$Json$Decode$map4,
+	$author$project$Book$Book,
+	A2($elm$json$Json$Decode$field, 'name', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'author', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'chapters', $author$project$Book$chapterDecoder),
+	$elm$json$Json$Decode$succeed(
+		A3($author$project$Book$Bookmark, 0, 0, 0)));
+var $elm$json$Json$Decode$map3 = _Json_map3;
+var $author$project$Main$textsDecoder = A4(
+	$elm$json$Json$Decode$map3,
+	$author$project$Main$Game,
+	A2(
+		$elm$json$Json$Decode$at,
+		_List_fromArray(
+			['texts', 'conquest_of_bread']),
+		$author$project$Book$bookDecoder),
+	A2(
+		$elm$json$Json$Decode$field,
+		'names',
+		$elm$json$Json$Decode$list($elm$json$Json$Decode$string)),
+	$elm$json$Json$Decode$succeed(false));
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2(
-		{book: $author$project$Main$Loading, mistyped: false},
+		$author$project$Main$Loading,
 		$elm$http$Http$get(
 			{
-				expect: $elm$http$Http$expectString($author$project$Main$GotText),
-				url: 'assets/bread.txt'
+				expect: A2($elm$http$Http$expectJson, $author$project$Main$GotText, $author$project$Main$textsDecoder),
+				url: 'assets/texts.json'
 			}));
 };
 var $author$project$Main$Keyboard = function (a) {
 	return {$: 'Keyboard', a: a};
 };
-var $elm$json$Json$Decode$field = _Json_decodeField;
-var $elm$json$Json$Decode$string = _Json_decodeString;
 var $author$project$Main$Character = function (a) {
 	return {$: 'Character', a: a};
 };
@@ -6446,8 +6555,7 @@ var $elm$browser$Browser$Events$on = F3(
 	});
 var $elm$browser$Browser$Events$onKeyPress = A2($elm$browser$Browser$Events$on, $elm$browser$Browser$Events$Document, 'keypress');
 var $author$project$Main$subscriptions = function (model) {
-	var _v0 = model.book;
-	if (_v0.$ === 'Success') {
+	if (model.$ === 'Success') {
 		return $elm$browser$Browser$Events$onKeyPress($author$project$Main$keyDecoder);
 	} else {
 		return $elm$core$Platform$Sub$none;
@@ -6459,41 +6567,6 @@ var $author$project$Main$Failure = function (a) {
 var $author$project$Main$MistypeTimeout = {$: 'MistypeTimeout'};
 var $author$project$Main$Success = function (a) {
 	return {$: 'Success', a: a};
-};
-var $elm$core$Array$fromListHelp = F3(
-	function (list, nodeList, nodeListSize) {
-		fromListHelp:
-		while (true) {
-			var _v0 = A2($elm$core$Elm$JsArray$initializeFromList, $elm$core$Array$branchFactor, list);
-			var jsArray = _v0.a;
-			var remainingItems = _v0.b;
-			if (_Utils_cmp(
-				$elm$core$Elm$JsArray$length(jsArray),
-				$elm$core$Array$branchFactor) < 0) {
-				return A2(
-					$elm$core$Array$builderToArray,
-					true,
-					{nodeList: nodeList, nodeListSize: nodeListSize, tail: jsArray});
-			} else {
-				var $temp$list = remainingItems,
-					$temp$nodeList = A2(
-					$elm$core$List$cons,
-					$elm$core$Array$Leaf(jsArray),
-					nodeList),
-					$temp$nodeListSize = nodeListSize + 1;
-				list = $temp$list;
-				nodeList = $temp$nodeList;
-				nodeListSize = $temp$nodeListSize;
-				continue fromListHelp;
-			}
-		}
-	});
-var $elm$core$Array$fromList = function (list) {
-	if (!list.b) {
-		return $elm$core$Array$empty;
-	} else {
-		return A3($elm$core$Array$fromListHelp, list, _List_Nil, 0);
-	}
 };
 var $elm$core$Bitwise$and = _Bitwise_and;
 var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
@@ -6551,8 +6624,7 @@ var $elm$core$Maybe$withDefault = F2(
 		}
 	});
 var $author$project$Book$curr = F2(
-	function (_v0, txt) {
-		var bm = _v0.a;
+	function (bm, txt) {
 		return A2(
 			$elm$core$Array$get,
 			bm.letter,
@@ -6563,43 +6635,46 @@ var $author$project$Book$curr = F2(
 						'',
 						A2($elm$core$Array$get, bm.word, txt)))));
 	});
-var $author$project$Book$Book = F2(
-	function (a, b) {
-		return {$: 'Book', a: a, b: b};
-	});
-var $author$project$Book$Bookmark = function (a) {
-	return {$: 'Bookmark', a: a};
+var $author$project$Book$currChap = function (book) {
+	return A2(
+		$elm$core$Maybe$withDefault,
+		{content: $elm$core$Array$empty, name: 'error'},
+		A2($elm$core$Array$get, book.bookmark.chapter, book.chapters));
 };
 var $author$project$Book$move = function (book) {
-	var bm = book.a.a;
-	var txt = book.b;
-	var _v0 = A2($elm$core$Array$get, bm.word, txt);
+	var bm = book.bookmark;
+	var _v0 = A2($elm$core$Array$get, book.bookmark.chapter, book.chapters);
 	if (_v0.$ === 'Just') {
-		var word = _v0.a;
-		return (_Utils_cmp(
-			bm.letter,
-			$elm$core$String$length(word) - 1) < 0) ? A2(
-			$author$project$Book$Book,
-			$author$project$Book$Bookmark(
-				_Utils_update(
-					bm,
-					{letter: bm.letter + 1})),
-			txt) : A2(
-			$author$project$Book$Book,
-			$author$project$Book$Bookmark(
-				_Utils_update(
-					bm,
-					{letter: 0, word: bm.word + 1})),
-			txt);
+		var chapter = _v0.a;
+		var _v1 = A2($elm$core$Array$get, book.bookmark.word, chapter.content);
+		if (_v1.$ === 'Just') {
+			var word = _v1.a;
+			return (_Utils_cmp(
+				book.bookmark.letter,
+				$elm$core$String$length(word) - 1) < 0) ? _Utils_update(
+				book,
+				{
+					bookmark: _Utils_update(
+						bm,
+						{letter: bm.letter + 1})
+				}) : _Utils_update(
+				book,
+				{
+					bookmark: _Utils_update(
+						bm,
+						{letter: 0, word: bm.word + 1})
+				});
+		} else {
+			return book;
+		}
 	} else {
 		return book;
 	}
 };
 var $author$project$Book$checkChar = F2(
 	function (_char, book) {
-		var bm = book.a;
-		var txt = book.b;
-		var current = A2($author$project$Book$curr, bm, txt);
+		var currentChapter = $author$project$Book$currChap(book);
+		var current = A2($author$project$Book$curr, book.bookmark, currentChapter.content);
 		if (current.$ === 'Just') {
 			var cr = current.a;
 			return (_Utils_eq(cr, _char) || (_Utils_eq(
@@ -6623,100 +6698,76 @@ var $author$project$Main$delay = F2(
 			},
 			$elm$core$Process$sleep(time));
 	});
-var $author$project$Main$loadMap = F2(
-	function (f, ls) {
-		switch (ls.$) {
-			case 'Success':
-				var x = ls.a;
-				return $author$project$Main$Success(
-					f(x));
-			case 'Failure':
-				var err = ls.a;
-				return $author$project$Main$Failure(err);
-			default:
-				return $author$project$Main$Loading;
-		}
-	});
-var $elm$core$String$words = _String_words;
-var $author$project$Book$newBook = function (txt) {
-	return A2(
-		$author$project$Book$Book,
-		$author$project$Book$Bookmark(
-			{letter: 0, word: 0}),
-		$elm$core$Array$fromList(
-			A2(
-				$elm$core$List$map,
-				function (str) {
-					return str + '␣';
-				},
-				$elm$core$String$words(txt))));
-};
+var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$update = F2(
 	function (msg, model) {
-		switch (msg.$) {
-			case 'GotText':
-				var result = msg.a;
-				if (result.$ === 'Ok') {
-					var fullText = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								book: $author$project$Main$Success(
-									$author$project$Book$newBook(fullText))
-							}),
-						$elm$core$Platform$Cmd$none);
-				} else {
-					var err = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								book: $author$project$Main$Failure(err)
-							}),
-						$elm$core$Platform$Cmd$none);
-				}
-			case 'Keyboard':
-				var key = msg.a;
-				if (key.$ === 'Character') {
-					var _char = key.a;
-					var _v3 = model.book;
-					if (_v3.$ === 'Success') {
-						var oldBook = _v3.a;
-						var _v4 = A2($author$project$Book$checkChar, _char, oldBook);
-						var newBook = _v4.a;
-						var error = _v4.b;
-						return error ? _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{mistyped: true}),
-							A2($author$project$Main$delay, 15, $author$project$Main$MistypeTimeout)) : _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									book: A2(
-										$author$project$Main$loadMap,
-										function (_v5) {
-											return newBook;
-										},
-										model.book)
-								}),
+		var _v0 = _Utils_Tuple2(msg, model);
+		_v0$3:
+		while (true) {
+			switch (_v0.a.$) {
+				case 'GotText':
+					if (_v0.b.$ === 'Loading') {
+						var result = _v0.a.a;
+						var _v1 = _v0.b;
+						if (result.$ === 'Ok') {
+							var game = result.a;
+							return _Utils_Tuple2(
+								$author$project$Main$Success(game),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							var err = result.a;
+							return _Utils_Tuple2(
+								$author$project$Main$Failure(err),
+								$elm$core$Platform$Cmd$none);
+						}
+					} else {
+						break _v0$3;
+					}
+				case 'Keyboard':
+					if (_v0.b.$ === 'Success') {
+						var key = _v0.a.a;
+						var game = _v0.b.a;
+						if (key.$ === 'Character') {
+							var _char = key.a;
+							var _v4 = A2($author$project$Book$checkChar, _char, game.book);
+							var newBook = _v4.a;
+							var error = _v4.b;
+							return error ? _Utils_Tuple2(
+								$author$project$Main$Success(
+									_Utils_update(
+										game,
+										{mistyped: true})),
+								A2($author$project$Main$delay, 15, $author$project$Main$MistypeTimeout)) : _Utils_Tuple2(
+								$author$project$Main$Success(
+									_Utils_update(
+										game,
+										{book: newBook})),
+								$elm$core$Platform$Cmd$none);
+						} else {
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
+					} else {
+						break _v0$3;
+					}
+				default:
+					if (_v0.b.$ === 'Success') {
+						var _v5 = _v0.a;
+						var game = _v0.b.a;
+						return _Utils_Tuple2(
+							$author$project$Main$Success(
+								_Utils_update(
+									game,
+									{mistyped: false})),
 							$elm$core$Platform$Cmd$none);
 					} else {
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						break _v0$3;
 					}
-				} else {
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			default:
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{mistyped: false}),
-					$elm$core$Platform$Cmd$none);
+			}
 		}
+		var _v6 = $elm$core$Debug$log('oh no');
+		return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 	});
 var $mdgriffith$elm_ui$Internal$Model$AlignY = function (a) {
 	return {$: 'AlignY', a: a};
@@ -6725,11 +6776,60 @@ var $mdgriffith$elm_ui$Internal$Model$Bottom = {$: 'Bottom'};
 var $mdgriffith$elm_ui$Element$alignBottom = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Bottom);
 var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
 var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
+var $author$project$Book$author = function (book) {
+	return book.author;
+};
 var $mdgriffith$elm_ui$Internal$Model$AlignX = function (a) {
 	return {$: 'AlignX', a: a};
 };
 var $mdgriffith$elm_ui$Internal$Model$CenterX = {$: 'CenterX'};
 var $mdgriffith$elm_ui$Element$centerX = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$CenterX);
+var $author$project$Book$chapterName = function (book) {
+	return function ($) {
+		return $.name;
+	}(
+		$author$project$Book$currChap(book));
+};
+var $mdgriffith$elm_ui$Internal$Model$Colored = F3(
+	function (a, b, c) {
+		return {$: 'Colored', a: a, b: b, c: c};
+	});
+var $mdgriffith$elm_ui$Internal$Model$StyleClass = F2(
+	function (a, b) {
+		return {$: 'StyleClass', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$Flag = function (a) {
+	return {$: 'Flag', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Flag$Second = function (a) {
+	return {$: 'Second', a: a};
+};
+var $mdgriffith$elm_ui$Internal$Flag$flag = function (i) {
+	return (i > 31) ? $mdgriffith$elm_ui$Internal$Flag$Second(1 << (i - 32)) : $mdgriffith$elm_ui$Internal$Flag$Flag(1 << i);
+};
+var $mdgriffith$elm_ui$Internal$Flag$fontColor = $mdgriffith$elm_ui$Internal$Flag$flag(14);
+var $elm$core$Basics$round = _Basics_round;
+var $mdgriffith$elm_ui$Internal$Model$floatClass = function (x) {
+	return $elm$core$String$fromInt(
+		$elm$core$Basics$round(x * 255));
+};
+var $mdgriffith$elm_ui$Internal$Model$formatColorClass = function (_v0) {
+	var red = _v0.a;
+	var green = _v0.b;
+	var blue = _v0.c;
+	var alpha = _v0.d;
+	return $mdgriffith$elm_ui$Internal$Model$floatClass(red) + ('-' + ($mdgriffith$elm_ui$Internal$Model$floatClass(green) + ('-' + ($mdgriffith$elm_ui$Internal$Model$floatClass(blue) + ('-' + $mdgriffith$elm_ui$Internal$Model$floatClass(alpha))))));
+};
+var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$fontColor,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$Colored,
+			'fc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(fontColor),
+			'color',
+			fontColor));
+};
 var $mdgriffith$elm_ui$Internal$Model$Unkeyed = function (a) {
 	return {$: 'Unkeyed', a: a};
 };
@@ -6839,15 +6939,6 @@ var $mdgriffith$elm_ui$Internal$Model$AsEl = {$: 'AsEl'};
 var $mdgriffith$elm_ui$Internal$Model$asEl = $mdgriffith$elm_ui$Internal$Model$AsEl;
 var $mdgriffith$elm_ui$Internal$Model$AsParagraph = {$: 'AsParagraph'};
 var $mdgriffith$elm_ui$Internal$Model$asParagraph = $mdgriffith$elm_ui$Internal$Model$AsParagraph;
-var $mdgriffith$elm_ui$Internal$Flag$Flag = function (a) {
-	return {$: 'Flag', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Flag$Second = function (a) {
-	return {$: 'Second', a: a};
-};
-var $mdgriffith$elm_ui$Internal$Flag$flag = function (i) {
-	return (i > 31) ? $mdgriffith$elm_ui$Internal$Flag$Second(1 << (i - 32)) : $mdgriffith$elm_ui$Internal$Flag$Flag(1 << i);
-};
 var $mdgriffith$elm_ui$Internal$Flag$alignBottom = $mdgriffith$elm_ui$Internal$Flag$flag(41);
 var $mdgriffith$elm_ui$Internal$Flag$alignRight = $mdgriffith$elm_ui$Internal$Flag$flag(40);
 var $mdgriffith$elm_ui$Internal$Flag$centerX = $mdgriffith$elm_ui$Internal$Flag$flag(42);
@@ -6889,11 +6980,6 @@ var $mdgriffith$elm_ui$Internal$Model$lengthClassName = function (x) {
 var $elm$core$Tuple$second = function (_v0) {
 	var y = _v0.b;
 	return y;
-};
-var $elm$core$Basics$round = _Basics_round;
-var $mdgriffith$elm_ui$Internal$Model$floatClass = function (x) {
-	return $elm$core$String$fromInt(
-		$elm$core$Basics$round(x * 255));
 };
 var $mdgriffith$elm_ui$Internal$Model$transformClass = function (transform) {
 	switch (transform.$) {
@@ -12205,22 +12291,7 @@ var $mdgriffith$elm_ui$Element$column = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
-var $mdgriffith$elm_ui$Internal$Model$Colored = F3(
-	function (a, b, c) {
-		return {$: 'Colored', a: a, b: b, c: c};
-	});
-var $mdgriffith$elm_ui$Internal$Model$StyleClass = F2(
-	function (a, b) {
-		return {$: 'StyleClass', a: a, b: b};
-	});
 var $mdgriffith$elm_ui$Internal$Flag$bgColor = $mdgriffith$elm_ui$Internal$Flag$flag(8);
-var $mdgriffith$elm_ui$Internal$Model$formatColorClass = function (_v0) {
-	var red = _v0.a;
-	var green = _v0.b;
-	var blue = _v0.c;
-	var alpha = _v0.d;
-	return $mdgriffith$elm_ui$Internal$Model$floatClass(red) + ('-' + ($mdgriffith$elm_ui$Internal$Model$floatClass(green) + ('-' + ($mdgriffith$elm_ui$Internal$Model$floatClass(blue) + ('-' + $mdgriffith$elm_ui$Internal$Model$floatClass(alpha))))));
-};
 var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
@@ -12230,17 +12301,6 @@ var $mdgriffith$elm_ui$Element$Background$color = function (clr) {
 			'bg-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(clr),
 			'background-color',
 			clr));
-};
-var $mdgriffith$elm_ui$Internal$Flag$fontColor = $mdgriffith$elm_ui$Internal$Flag$flag(14);
-var $mdgriffith$elm_ui$Element$Font$color = function (fontColor) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$fontColor,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$Colored,
-			'fc-' + $mdgriffith$elm_ui$Internal$Model$formatColorClass(fontColor),
-			'color',
-			fontColor));
 };
 var $mdgriffith$elm_ui$Internal$Model$Rgba = F4(
 	function (a, b, c, d) {
@@ -12317,6 +12377,12 @@ var $mdgriffith$elm_ui$Element$el = F2(
 				_List_fromArray(
 					[child])));
 	});
+var $mdgriffith$elm_ui$Internal$Model$Class = F2(
+	function (a, b) {
+		return {$: 'Class', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$fontWeight = $mdgriffith$elm_ui$Internal$Flag$flag(13);
+var $mdgriffith$elm_ui$Element$Font$extraLight = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$fontWeight, $mdgriffith$elm_ui$Internal$Style$classes.textExtraLight);
 var $mdgriffith$elm_ui$Internal$Model$FontFamily = F2(
 	function (a, b) {
 		return {$: 'FontFamily', a: a, b: b};
@@ -12389,7 +12455,6 @@ var $elm$core$String$dropRight = F2(
 	function (n, string) {
 		return (n < 1) ? string : A3($elm$core$String$slice, 0, -n, string);
 	});
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Elm$JsArray$appendN = _JsArray_appendN;
 var $elm$core$Elm$JsArray$slice = _JsArray_slice;
 var $elm$core$Array$appendHelpBuilder = F2(
@@ -12614,27 +12679,27 @@ var $elm$core$Array$slice = F3(
 			correctFrom,
 			A2($elm$core$Array$sliceRight, correctTo, array));
 	});
-var $author$project$Book$get = function (_v0) {
-	var bm = _v0.a.a;
-	var txt = _v0.b;
+var $author$project$Book$get = function (book) {
+	var currentChapter = $author$project$Book$currChap(book);
+	var bm = book.bookmark;
 	var currentWord = A2(
 		$elm$core$Maybe$withDefault,
 		'',
-		A2($elm$core$Array$get, bm.word, txt));
-	var _v1 = A2(
+		A2($elm$core$Array$get, bm.word, currentChapter.content));
+	var _v0 = A2(
 		$elm$core$Debug$log,
 		'words',
 		A3(
 			$elm$core$Array$slice,
 			A2($elm$core$Basics$max, 0, bm.word - 1),
 			bm.word + 4,
-			txt));
+			currentChapter.content));
 	return _Utils_Tuple3(
 		_Utils_ap(
 			A2(
 				$elm$core$Maybe$withDefault,
 				'',
-				A2($elm$core$Array$get, bm.word - 1, txt)),
+				A2($elm$core$Array$get, bm.word - 1, currentChapter.content)),
 			A2($elm$core$String$left, bm.letter, currentWord)),
 		A2(
 			$elm$core$Array$get,
@@ -12652,15 +12717,16 @@ var $author$project$Book$get = function (_v0) {
 					$elm$core$String$join,
 					'',
 					$elm$core$Array$toList(
-						A3($elm$core$Array$slice, bm.word + 1, bm.word + 3, txt))),
+						A3($elm$core$Array$slice, bm.word + 1, bm.word + 3, currentChapter.content))),
 				A2(
 					$elm$core$String$dropRight,
 					1,
 					A2(
 						$elm$core$Maybe$withDefault,
 						'',
-						A2($elm$core$Array$get, bm.word + 3, txt))))));
+						A2($elm$core$Array$get, bm.word + 3, currentChapter.content))))));
 };
+var $mdgriffith$elm_ui$Element$Font$italic = $mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.italic);
 var $mdgriffith$elm_ui$Internal$Model$OnlyDynamic = F2(
 	function (a, b) {
 		return {$: 'OnlyDynamic', a: a, b: b};
@@ -12875,6 +12941,27 @@ var $mdgriffith$elm_ui$Element$layout = $mdgriffith$elm_ui$Element$layoutWith(
 	{options: _List_Nil});
 var $mdgriffith$elm_ui$Internal$Model$Monospace = {$: 'Monospace'};
 var $mdgriffith$elm_ui$Element$Font$monospace = $mdgriffith$elm_ui$Internal$Model$Monospace;
+var $author$project$Book$name = function (book) {
+	return book.name;
+};
+var $mdgriffith$elm_ui$Internal$Model$PaddingStyle = F5(
+	function (a, b, c, d, e) {
+		return {$: 'PaddingStyle', a: a, b: b, c: c, d: d, e: e};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$padding = $mdgriffith$elm_ui$Internal$Flag$flag(2);
+var $mdgriffith$elm_ui$Element$padding = function (x) {
+	var f = x;
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$padding,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+			'p-' + $elm$core$String$fromInt(x),
+			f,
+			f,
+			f,
+			f));
+};
 var $mdgriffith$elm_ui$Internal$Model$Right = {$: 'Right'};
 var $mdgriffith$elm_ui$Element$alignRight = $mdgriffith$elm_ui$Internal$Model$AlignX($mdgriffith$elm_ui$Internal$Model$Right);
 var $author$project$Main$pastStyle = _List_fromArray(
@@ -12903,11 +12990,32 @@ var $mdgriffith$elm_ui$Element$row = F2(
 						attrs))),
 			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
 	});
+var $mdgriffith$elm_ui$Internal$Model$Serif = {$: 'Serif'};
+var $mdgriffith$elm_ui$Element$Font$serif = $mdgriffith$elm_ui$Internal$Model$Serif;
 var $mdgriffith$elm_ui$Element$Font$size = function (i) {
 	return A2(
 		$mdgriffith$elm_ui$Internal$Model$StyleClass,
 		$mdgriffith$elm_ui$Internal$Flag$fontSize,
 		$mdgriffith$elm_ui$Internal$Model$FontSize(i));
+};
+var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
+	function (a, b, c) {
+		return {$: 'SpacingStyle', a: a, b: b, c: c};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
+var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
+	function (x, y) {
+		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
+	});
+var $mdgriffith$elm_ui$Element$spacing = function (x) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$spacing,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
+			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
+			x,
+			x));
 };
 var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
 	return {$: 'Text', a: a};
@@ -12916,21 +13024,22 @@ var $mdgriffith$elm_ui$Element$text = function (content) {
 	return $mdgriffith$elm_ui$Internal$Model$Text(content);
 };
 var $elm$core$Debug$toString = _Debug_toString;
+var $mdgriffith$elm_ui$Element$Font$typeface = $mdgriffith$elm_ui$Internal$Model$Typeface;
 var $author$project$Main$view = function (model) {
 	return A2(
 		$mdgriffith$elm_ui$Element$layout,
 		_List_Nil,
 		function () {
-			var _v0 = model.book;
-			switch (_v0.$) {
+			switch (model.$) {
 				case 'Loading':
 					return $mdgriffith$elm_ui$Element$text('Loading. . .');
 				case 'Failure':
-					var err = _v0.a;
+					var err = model.a;
 					return $mdgriffith$elm_ui$Element$text(
 						$elm$core$Debug$toString(err));
 				default:
-					var book = _v0.a;
+					var game = model.a;
+					var book = game.book;
 					var _v1 = $author$project$Book$get(book);
 					var past_word = _v1.a;
 					var maybe_current_letter = _v1.b;
@@ -12940,47 +13049,100 @@ var $author$project$Main$view = function (model) {
 						_List_fromArray(
 							[
 								$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
-								$mdgriffith$elm_ui$Element$height(
-								$mdgriffith$elm_ui$Element$px(360)),
-								$mdgriffith$elm_ui$Element$alignTop
+								$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+								$mdgriffith$elm_ui$Element$Font$family(
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$Font$typeface('Georgia'),
+										$mdgriffith$elm_ui$Element$Font$serif
+									])),
+								$mdgriffith$elm_ui$Element$spacing(8),
+								$mdgriffith$elm_ui$Element$padding(4)
 							]),
 						_List_fromArray(
 							[
 								A2(
-								$mdgriffith$elm_ui$Element$row,
+								$mdgriffith$elm_ui$Element$column,
 								_List_fromArray(
 									[
-										$mdgriffith$elm_ui$Element$alignBottom,
-										$mdgriffith$elm_ui$Element$centerX,
-										$mdgriffith$elm_ui$Element$Font$size(44),
-										$mdgriffith$elm_ui$Element$Font$family(
-										_List_fromArray(
-											[$mdgriffith$elm_ui$Element$Font$monospace])),
-										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
+										$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$fill),
+										$mdgriffith$elm_ui$Element$height(
+										$mdgriffith$elm_ui$Element$px(360)),
+										$mdgriffith$elm_ui$Element$alignTop
 									]),
 								_List_fromArray(
 									[
 										A2(
-										$mdgriffith$elm_ui$Element$el,
-										$author$project$Main$pastStyle,
-										$mdgriffith$elm_ui$Element$text(past_word)),
-										function () {
-										if (maybe_current_letter.$ === 'Nothing') {
-											return $mdgriffith$elm_ui$Element$text('[error]');
-										} else {
-											var current_letter = maybe_current_letter.a;
-											return A2(
+										$mdgriffith$elm_ui$Element$row,
+										_List_fromArray(
+											[
+												$mdgriffith$elm_ui$Element$alignBottom,
+												$mdgriffith$elm_ui$Element$centerX,
+												$mdgriffith$elm_ui$Element$Font$size(44),
+												$mdgriffith$elm_ui$Element$Font$family(
+												_List_fromArray(
+													[$mdgriffith$elm_ui$Element$Font$monospace])),
+												$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink)
+											]),
+										_List_fromArray(
+											[
+												A2(
 												$mdgriffith$elm_ui$Element$el,
-												$author$project$Main$currentStyle(model.mistyped),
-												$mdgriffith$elm_ui$Element$text(
-													$elm$core$String$fromChar(current_letter)));
-										}
-									}(),
-										A2(
-										$mdgriffith$elm_ui$Element$el,
-										$author$project$Main$futureStyle,
-										$mdgriffith$elm_ui$Element$text(future_words))
-									]))
+												$author$project$Main$pastStyle,
+												$mdgriffith$elm_ui$Element$text(past_word)),
+												function () {
+												if (maybe_current_letter.$ === 'Nothing') {
+													return $mdgriffith$elm_ui$Element$text('[error]');
+												} else {
+													var current_letter = maybe_current_letter.a;
+													return A2(
+														$mdgriffith$elm_ui$Element$el,
+														$author$project$Main$currentStyle(game.mistyped),
+														$mdgriffith$elm_ui$Element$text(
+															$elm$core$String$fromChar(current_letter)));
+												}
+											}(),
+												A2(
+												$mdgriffith$elm_ui$Element$el,
+												$author$project$Main$futureStyle,
+												$mdgriffith$elm_ui$Element$text(future_words))
+											]))
+									])),
+								A2(
+								$mdgriffith$elm_ui$Element$el,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$centerX,
+										$mdgriffith$elm_ui$Element$Font$size(20),
+										$mdgriffith$elm_ui$Element$Font$extraLight,
+										$mdgriffith$elm_ui$Element$spacing(3),
+										$mdgriffith$elm_ui$Element$Font$color(
+										A3($mdgriffith$elm_ui$Element$rgb, 0.4, 0.4, 0.4))
+									]),
+								A2(
+									$mdgriffith$elm_ui$Element$el,
+									_List_Nil,
+									$mdgriffith$elm_ui$Element$text(
+										$author$project$Book$chapterName(book)))),
+								A2(
+								$mdgriffith$elm_ui$Element$el,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$centerX,
+										$mdgriffith$elm_ui$Element$Font$size(22)
+									]),
+								$mdgriffith$elm_ui$Element$text(
+									$author$project$Book$name(book))),
+								A2(
+								$mdgriffith$elm_ui$Element$el,
+								_List_fromArray(
+									[
+										$mdgriffith$elm_ui$Element$centerX,
+										$mdgriffith$elm_ui$Element$Font$size(18),
+										$mdgriffith$elm_ui$Element$Font$italic
+									]),
+								$mdgriffith$elm_ui$Element$text(
+									$author$project$Book$author(book)))
 							]));
 			}
 		}());
